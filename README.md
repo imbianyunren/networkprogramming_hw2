@@ -1,5 +1,5 @@
 # networkprogramming_hw2
-NP HW2 OXOX 
+NP HW2 OXOX <br>
 請設計一對client--server的OX棋下棋程式，具有下列幾個特性：
 
 1. 允許至少2個client同時登錄至server。
