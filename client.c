@@ -84,6 +84,14 @@ void* recv_thread(void *p){
             ntr[cnt]='\0';
             strcpy(defeat_name,ntr); //取得對方的名字
         }
+        else if(strstr(buf,"disagree")!=NULL){
+            defeat_fd=atoi(&buf[9]);
+            char *ptr=&buf[6];
+            while(*ptr!=' ') ptr++;
+            ptr++;
+            strcpy(defeat_name,ptr);
+            printf("[sys] [%s]拒絕了你，輸入list選擇對戰對象\n",defeat_name);
+        }
         else if(strstr(buf,"AGREE ")!=NULL){
             defeat_fd=atoi(&buf[6]);
             char *ptr=&buf[6];
@@ -140,7 +148,8 @@ void start(){
         }
         else if(strstr(buf,"wrong")!=NULL){
             printf("%s",buf);
-            break;
+            close(sockfd);
+            return;
         }
     }
     pthread_t tid;
@@ -156,6 +165,18 @@ void start(){
         else if(buf[0]=='$'){
             send(sockfd,buf,strlen(buf),0);
             printf("[sys] 等待對方回應請稍後喔..\n");
+        }
+        else if(strcmp(buf,"exit\n")==0){
+            memset(buf,'\0',sizeof(buf));
+            sprintf(buf,"[sys] %s 已登出\n",name);
+            send(sockfd,buf,strlen(buf),0);
+            break;
+        }
+        else if(strcmp(buf,"no\n")==0){
+            memset(buf,'\0',sizeof(buf));
+            printf("[sys] 你已拒絕了%s \n",defeat_name);
+            sprintf(buf,"disagree %d",defeat_fd);
+            send(sockfd,buf,strlen(buf),0);
         }
         else if(strcmp(buf,"yes\n")==0){
             memset(buf,'\0',sizeof(buf));
@@ -211,7 +232,15 @@ void start(){
                 }
             }
         }
+        else{
+            if(buf[0]=='\n'||buf[0]=='\0') continue;
+            char msg[2000];
+            printf("broadcast to others: %s",buf);
+            sprintf(msg,"broadcast %s",buf);
+            send(sockfd,msg,strlen(msg),0);
+        }
     }
+    printf("[sys] 你已登出\n");
     close(sockfd);
 }
 int main(){

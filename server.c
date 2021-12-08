@@ -13,6 +13,8 @@ char username[100][10];
 char welcome[]="---------------------\n"
                "歡迎遊玩OX遊戲\n"
                "請輸入'list'選擇對戰對象\n"
+               "輸入'exit'登出\n"
+               "可以直接輸入非關鍵文字廣播\n"
                "---------------------\n";
 void init(){
 	if((sockfd = socket(PF_INET,SOCK_STREAM,0))==-1){
@@ -40,6 +42,15 @@ int authentication(char* buf){
         if(strcmp(auth,buf)==0) return 1;
     }
     return 0;
+}
+void broadcast(char *ptr,int fd){
+    printf("Someone broadcasting...\n");
+    printf("%s",ptr);
+    for(int i=0;i<100;i++){
+        if(users[i]!=0&&users[i]!=fd){
+            send(users[i],ptr,strlen(ptr),0);
+        }
+    }
 }
 void get_allusers(int fd){
     int another_user=0;
@@ -102,8 +113,13 @@ void* service(void* p){
                         "wrong username or pwd\n"
                         "---------------------\n";
             send(fd,wrong,strlen(wrong),0);
+            for(int i=0;i<100;i++){
+                if(fd==users[i]){
+                    users[i]=0;
+                    break;
+                }
+            }
             pthread_exit(NULL); 
-            break;
         }
     }
     while(1){
@@ -116,11 +132,20 @@ void* service(void* p){
                     break;
                 }
             }
-            printf("user: [%s] is logout",username[fd]);
+            char str[100];
+            sprintf(str,"user: [%s] is logout\n",username[fd]);
+            broadcast(str,fd);
+            printf("user: [%s] is logout\n",username[fd]);
             pthread_exit(NULL); 
         }
         else if(strcmp(buf,"list\n")==0){
             get_allusers(fd);
+        }
+        else if(strstr(buf,"broadcast")!=NULL){
+            char* ptr=&buf[10];
+            char namee[100];
+            sprintf(namee,"[broadcast from %s]: %s",username[fd],ptr);
+            broadcast(namee,fd);
         }
         else if(strstr(buf,"$")!=NULL){
             int id=atoi(&buf[1]);
@@ -139,6 +164,12 @@ void* service(void* p){
                 sprintf(defeat_req,"[sys] [%d][%s]傳送了對戰請求,您想要跟他對戰嗎？(yes/no)\n",fd,username[fd]);
                 send(id,defeat_req,strlen(defeat_req),0);
             }
+        }
+        else if(strstr(buf,"disagree ")!=NULL){
+            int id=atoi(&buf[9]);
+            char new_buf[100];
+            sprintf(new_buf,"disagree %d %s",fd,username[fd]);
+            send(id,new_buf,strlen(new_buf),0);
         }
         else if(strstr(buf,"AGREE ")!=NULL){
             int id=atoi(&buf[6]);
